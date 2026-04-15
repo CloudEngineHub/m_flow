@@ -22,9 +22,7 @@ class PlaygroundFaceMapping(Base):
     """
 
     __tablename__ = "playground_face_mappings"
-    __table_args__ = (
-        UniqueConstraint("owner_id", "face_registered_id", "dataset_id", name="uq_owner_face_dataset"),
-    )
+    __table_args__ = (UniqueConstraint("owner_id", "face_registered_id", "dataset_id", name="uq_owner_face_dataset"),)
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     owner_id = Column(PG_UUID(as_uuid=True), nullable=False, index=True)

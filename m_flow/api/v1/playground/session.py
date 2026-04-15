@@ -79,12 +79,14 @@ class PlaygroundSession:
     _memorizing_datasets: set = field(default_factory=set)
 
     def add_message(self, role: str, content: str, speaker_face_id: int | None = None):
-        self.messages.append({
-            "role": role,
-            "content": content,
-            "speaker_face_id": speaker_face_id,
-            "timestamp": time.time(),
-        })
+        self.messages.append(
+            {
+                "role": role,
+                "content": content,
+                "speaker_face_id": speaker_face_id,
+                "timestamp": time.time(),
+            }
+        )
         # Count only user messages as "turns" (1 turn = 1 user message).
         # Both user and assistant contribute to token count.
         if role == "user":
@@ -97,8 +99,7 @@ class PlaygroundSession:
     def should_flush(self) -> bool:
         if self._flush_in_progress:
             return False
-        return (self.buffer_tokens >= self.flush_token_threshold
-                or self.buffer_turns >= self.flush_turn_threshold)
+        return self.buffer_tokens >= self.flush_token_threshold or self.buffer_turns >= self.flush_turn_threshold
 
     def get_recent_messages(self, max_turns: int = 20) -> list[dict]:
         recent = [m for m in self.messages if m["role"] in ("user", "assistant")]
@@ -106,7 +107,7 @@ class PlaygroundSession:
 
     def _get_buffer_messages(self) -> list[dict]:
         """Return messages in the current unflushed buffer window."""
-        return self.messages[self._buffer_start_idx:]
+        return self.messages[self._buffer_start_idx :]
 
     def _format_episode_text(self, buffer_msgs: list[dict]) -> str:
         """Format buffered messages into an episode transcript."""
@@ -134,11 +135,7 @@ class PlaygroundSession:
         topics_str = "; ".join(main_topics[:3]) if main_topics else "(listener)"
         all_names = {self._resolve_speaker_name(fid) for fid in self.participants if fid is not None}
         participants_str = ", ".join(sorted(all_names)) or "unknown participants"
-        return (
-            f"{name} participated in a conversation. "
-            f"Participants: {participants_str}. "
-            f"{name} said: {topics_str}"
-        )
+        return f"{name} participated in a conversation. Participants: {participants_str}. {name} said: {topics_str}"
 
     def _resolve_speaker_name(self, face_id: int) -> str:
         """Resolve face_id to a human-readable name."""
@@ -206,9 +203,7 @@ class PlaygroundSession:
                     _log.error(f"add() failed for dataset {ds_id_str}: {e}")
 
             if not datasets_affected:
-                _log.warning(
-                    f"Session {self.session_id}: no datasets mapped, buffer preserved"
-                )
+                _log.warning(f"Session {self.session_id}: no datasets mapped, buffer preserved")
                 return FlushResult(
                     ok=False,
                     error="No datasets linked to current participants — buffer preserved",
@@ -231,13 +226,13 @@ class PlaygroundSession:
                 for u in pending:
                     self._memorizing_datasets.add(str(u))
                 snapshot = {"tokens": tokens_to_flush, "turns": turns_to_flush}
-                task = asyncio.create_task(
-                    self._memorize_then_clear(pending, user, snapshot)
-                )
+                task = asyncio.create_task(self._memorize_then_clear(pending, user, snapshot))
                 self._background_tasks.add(task)
                 task.add_done_callback(self._background_tasks.discard)
             elif unique_memorize_uuids:
-                _log.info(f"Session {self.session_id}: memorize skipped — already in progress for {unique_memorize_uuids}")
+                _log.info(
+                    f"Session {self.session_id}: memorize skipped — already in progress for {unique_memorize_uuids}"
+                )
 
             _log.info(
                 f"Session {self.session_id}: add() done for {tokens_to_flush} tokens, "
@@ -264,6 +259,7 @@ class PlaygroundSession:
         """Run memorize in background. Buffer already cleared after add()."""
         try:
             from m_flow import memorize as m_flow_memorize
+
             await m_flow_memorize(datasets=dataset_uuids, user=user, run_in_background=False)
             self._last_flush_time = time.time()
             self._total_flushes += 1
@@ -287,7 +283,7 @@ class PlaygroundSession:
             return
 
         self._flush_retry_count += 1
-        delay = 2 ** self._flush_retry_count
+        delay = 2**self._flush_retry_count
         _log.info(f"Session {self.session_id}: scheduling flush retry #{self._flush_retry_count} in {delay}s")
 
         async def _retry():
@@ -300,7 +296,6 @@ class PlaygroundSession:
         task = asyncio.create_task(_retry())
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
-
 
 
 def create_session(face_recognition_url: str, user_id: str = "") -> PlaygroundSession:

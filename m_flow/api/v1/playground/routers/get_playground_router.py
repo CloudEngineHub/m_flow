@@ -17,17 +17,28 @@ from m_flow.llm.config import get_llm_config
 from m_flow.shared.logging_utils import get_logger
 
 from ..models import (
-    SessionCreateRequest, SessionCreateResponse,
-    ChatRequest, ChatResponse,
-    FlushRequest, FlushResponse,
-    LinkFaceRequest, RenamePersonRequest,
-    VisionActionRequest, SetLlmRequest,
+    SessionCreateRequest,
+    SessionCreateResponse,
+    ChatRequest,
+    ChatResponse,
+    FlushRequest,
+    FlushResponse,
+    LinkFaceRequest,
+    RenamePersonRequest,
+    VisionActionRequest,
+    SetLlmRequest,
 )
 from ..session import create_session, get_session
 from ..face_bridge import (
-    fetch_persons, check_face_recognition_status, start_face_pipeline, identify_speaker,
-    generate_stream_url, sync_mappings_to_session, detect_and_link_new_faces,
-    save_face_mapping, rename_person,
+    fetch_persons,
+    check_face_recognition_status,
+    start_face_pipeline,
+    identify_speaker,
+    generate_stream_url,
+    sync_mappings_to_session,
+    detect_and_link_new_faces,
+    save_face_mapping,
+    rename_person,
 )
 from ..retriever import retrieve_memories
 
@@ -42,6 +53,7 @@ async def _resolve_coref(query: str, user_id: str, session_id: str):
     """
     try:
         from m_flow.preprocessing.coreference import preprocess_query_with_coref_async
+
         result = await preprocess_query_with_coref_async(
             query=query,
             user_id=user_id,
@@ -62,14 +74,13 @@ def _extract_coref_debug(session_id: str, user_id: str, result) -> dict | None:
     """Extract the full coref session state for the debug workflow panel."""
     try:
         from m_flow.preprocessing.coreference.preprocessor import _get_session_manager
+
         manager = _get_session_manager()
         if manager is None:
             return None
 
         with manager._lock:
-            session = manager._sessions.get(
-                session_id or f"user_{user_id}"
-            )
+            session = manager._sessions.get(session_id or f"user_{user_id}")
             if session is None:
                 return None
 
@@ -78,11 +89,13 @@ def _extract_coref_debug(session_id: str, user_id: str, result) -> dict | None:
             def _entity_list(stack) -> list[dict]:
                 out = []
                 for e in stack:
-                    out.append({
-                        "text": e.text,
-                        "type": getattr(e, "type", ""),
-                        "sentence_id": getattr(e, "sentence_id", -1),
-                    })
+                    out.append(
+                        {
+                            "text": e.text,
+                            "type": getattr(e, "type", ""),
+                            "sentence_id": getattr(e, "sentence_id", -1),
+                        }
+                    )
                 return out
 
             return {
@@ -155,7 +168,10 @@ def get_playground_router() -> APIRouter:
         t1 = _t.perf_counter()
 
         new_links = await detect_and_link_new_faces(
-            persons, session, owner_id=user.id, user=user,
+            persons,
+            session,
+            owner_id=user.id,
+            user=user,
         )
         t2 = _t.perf_counter()
 
@@ -168,7 +184,9 @@ def get_playground_router() -> APIRouter:
                     session.face_name_mapping[rid] = name
 
         speaker = identify_speaker(persons, req.speaker_face_id)
-        speaker_name = (session.face_name_mapping.get(speaker.get("registered_id")) if speaker else None) or (speaker.get("name", "") if speaker else "")
+        speaker_name = (session.face_name_mapping.get(speaker.get("registered_id")) if speaker else None) or (
+            speaker.get("name", "") if speaker else ""
+        )
         speaker_label = speaker_name or "User"
 
         coref_input = f"[{speaker_label}] {req.message}" if speaker_label != "User" else req.message
@@ -178,7 +196,7 @@ def get_playground_router() -> APIRouter:
             session_id=req.session_id,
         )
         if resolved_query.startswith(f"[{speaker_label}] "):
-            resolved_query = resolved_query[len(f"[{speaker_label}] "):]
+            resolved_query = resolved_query[len(f"[{speaker_label}] ") :]
         t3 = _t.perf_counter()
 
         session.add_message("user", req.message, speaker_face_id=req.speaker_face_id)
@@ -204,11 +222,11 @@ def get_playground_router() -> APIRouter:
         t4 = _t.perf_counter()
 
         _log.info(
-            f"[TIMING] fetch_persons={int((t1-t0)*1000)}ms "
-            f"detect_link={int((t2-t1)*1000)}ms "
-            f"coref={int((t3-t2)*1000)}ms "
-            f"retrieval={int((t4-t3)*1000)}ms "
-            f"total_prep={int((t4-t0)*1000)}ms"
+            f"[TIMING] fetch_persons={int((t1 - t0) * 1000)}ms "
+            f"detect_link={int((t2 - t1) * 1000)}ms "
+            f"coref={int((t3 - t2) * 1000)}ms "
+            f"retrieval={int((t4 - t3) * 1000)}ms "
+            f"total_prep={int((t4 - t0) * 1000)}ms"
         )
 
         memory_section = ""
@@ -239,18 +257,20 @@ def get_playground_router() -> APIRouter:
             coref_info = [
                 {"original": r.get("pronoun", ""), "resolved": r.get("replacement", "")}
                 for r in coref_replacements
-                if r.get("pronoun") and r.get("replacement")
-                and r.get("pronoun") != r.get("replacement")
+                if r.get("pronoun") and r.get("replacement") and r.get("pronoun") != r.get("replacement")
             ]
 
-        persons_in_frame = [{
-            "face_registered_id": p.get("registered_id"),
-            "name": session.face_name_mapping.get(p.get("registered_id")) or p.get("name", ""),
-            "mouth": p.get("mouth", ""),
-            "identity": p.get("identity", ""),
-            "dataset_ids": session.face_dataset_mapping.get(p.get("registered_id"), []),
-            "avatar": p.get("avatar"),
-        } for p in persons]
+        persons_in_frame = [
+            {
+                "face_registered_id": p.get("registered_id"),
+                "name": session.face_name_mapping.get(p.get("registered_id")) or p.get("name", ""),
+                "mouth": p.get("mouth", ""),
+                "identity": p.get("identity", ""),
+                "dataset_ids": session.face_dataset_mapping.get(p.get("registered_id"), []),
+                "avatar": p.get("avatar"),
+            }
+            for p in persons
+        ]
 
         return {
             "session": session,
@@ -263,9 +283,17 @@ def get_playground_router() -> APIRouter:
             "coref_debug": coref_debug,
         }
 
-    def _build_done_payload(session, speaker_info, persons_in_frame,
-                            new_links, has_memory_context, coref_info,
-                            coref_debug, full_reply, flush_result):
+    def _build_done_payload(
+        session,
+        speaker_info,
+        persons_in_frame,
+        new_links,
+        has_memory_context,
+        coref_info,
+        coref_debug,
+        full_reply,
+        flush_result,
+    ):
         return {
             "full_reply": full_reply,
             "speaker": speaker_info,
@@ -280,7 +308,9 @@ def get_playground_router() -> APIRouter:
                     "tokens_flushed": flush_result.tokens_flushed,
                     "turns_flushed": flush_result.turns_flushed,
                     "datasets_affected": flush_result.datasets_affected,
-                } if flush_result and flush_result.ok else None,
+                }
+                if flush_result and flush_result.ok
+                else None,
             },
             "new_face_links": new_links if new_links else None,
             "has_memory_context": has_memory_context,
@@ -313,7 +343,11 @@ def get_playground_router() -> APIRouter:
                     model_name = model_name.split("/", 1)[1]
                 # is not None: distinguish None (use global) from "" (explicitly no key)
                 api_key = session.llm_api_key_override if session.llm_api_key_override is not None else cfg.llm_api_key
-                endpoint = session.llm_endpoint_override if session.llm_endpoint_override is not None else (cfg.llm_endpoint or None)
+                endpoint = (
+                    session.llm_endpoint_override
+                    if session.llm_endpoint_override is not None
+                    else (cfg.llm_endpoint or None)
+                )
                 client_kwargs: dict = {"api_key": api_key}
                 if endpoint:
                     client_kwargs["base_url"] = endpoint
@@ -416,16 +450,19 @@ def get_playground_router() -> APIRouter:
                 if name and rid not in session.face_name_mapping:
                     session.face_name_mapping[rid] = name
 
-        result = [{
-            "face_registered_id": p.get("registered_id"),
-            "display_name": session.face_name_mapping.get(p.get("registered_id")) or p.get("name", ""),
-            "mouth": p.get("mouth", ""),
-            "identity": p.get("identity", ""),
-            "track_id": p.get("track_id"),
-            "person_id": p.get("person_id"),
-            "dataset_ids": session.face_dataset_mapping.get(p.get("registered_id"), []),
-            "avatar": p.get("avatar"),
-        } for p in persons]
+        result = [
+            {
+                "face_registered_id": p.get("registered_id"),
+                "display_name": session.face_name_mapping.get(p.get("registered_id")) or p.get("name", ""),
+                "mouth": p.get("mouth", ""),
+                "identity": p.get("identity", ""),
+                "track_id": p.get("track_id"),
+                "person_id": p.get("person_id"),
+                "dataset_ids": session.face_dataset_mapping.get(p.get("registered_id"), []),
+                "avatar": p.get("avatar"),
+            }
+            for p in persons
+        ]
 
         return {
             "persons": result,
@@ -501,6 +538,7 @@ def get_playground_router() -> APIRouter:
             return {"error": "Session not found"}
 
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=3.0) as client:
                 api_key = os.environ.get("FACE_API_KEY", "")
@@ -533,6 +571,7 @@ def get_playground_router() -> APIRouter:
             return {"ok": False, "error": "FACE_API_KEY not set"}
 
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 resp = await client.post(
@@ -571,6 +610,7 @@ def get_playground_router() -> APIRouter:
             return {"ok": False, "error": "FACE_API_KEY not set"}
 
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 resp = await client.post(
@@ -602,6 +642,7 @@ def get_playground_router() -> APIRouter:
             return {"ok": False, "error": "FACE_API_KEY not set"}
 
         import httpx
+
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
                 await client.post(
@@ -612,6 +653,7 @@ def get_playground_router() -> APIRouter:
             pass
 
         import asyncio
+
         await asyncio.sleep(1)
 
         try:
@@ -651,6 +693,7 @@ def get_playground_router() -> APIRouter:
             )
             content = await file.read()
             import io
+
             audio = io.BytesIO(content)
             audio.name = file.filename or "audio.webm"
             transcript = await client.audio.transcriptions.create(
@@ -695,6 +738,7 @@ def get_playground_router() -> APIRouter:
     def _get_user_sessions(user_id: str):
         """Return only sessions belonging to this user."""
         from ..session import _sessions
+
         return [s for s in _sessions.values() if s.user_id == user_id]
 
     return router

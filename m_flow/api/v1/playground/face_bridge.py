@@ -21,6 +21,7 @@ FACE_API_KEY = os.environ.get("FACE_API_KEY", "")
 # Fanjing-face-recognition HTTP helpers
 # ---------------------------------------------------------------------------
 
+
 async def fetch_persons(face_recognition_url: str) -> list[dict]:
     """Fetch currently detected persons from the face recognition service."""
     try:
@@ -55,8 +56,14 @@ async def start_face_pipeline(face_recognition_url: str) -> bool:
         async with httpx.AsyncClient(timeout=10.0) as client:
             resp = await client.post(
                 f"{face_recognition_url}/api/start",
-                json={"mode": "camera", "device": 0, "speaking_enabled": True,
-                      "embed_enabled": True, "align_enabled": True, "m5_enabled": True},
+                json={
+                    "mode": "camera",
+                    "device": 0,
+                    "speaking_enabled": True,
+                    "embed_enabled": True,
+                    "align_enabled": True,
+                    "m5_enabled": True,
+                },
                 headers={"X-API-Key": FACE_API_KEY},
             )
             return resp.status_code == 200 and resp.json().get("ok", False)
@@ -93,6 +100,7 @@ def identify_speaker(persons: list[dict], speaker_face_id: int | None = None) ->
 # Persistent face ↔ dataset mapping (Phase 3)
 # ---------------------------------------------------------------------------
 
+
 async def load_face_mappings(owner_id: UUID) -> list[dict]:
     """Load all face-dataset mappings from DB for a given user.
 
@@ -102,11 +110,7 @@ async def load_face_mappings(owner_id: UUID) -> list[dict]:
     from .face_mapping_model import PlaygroundFaceMapping
 
     async with get_async_session(commit=False) as session:
-        result = await session.execute(
-            select(PlaygroundFaceMapping).where(
-                PlaygroundFaceMapping.owner_id == owner_id
-            )
-        )
+        result = await session.execute(select(PlaygroundFaceMapping).where(PlaygroundFaceMapping.owner_id == owner_id))
         rows = result.scalars().all()
         return [
             {
@@ -143,13 +147,15 @@ async def save_face_mapping(
             existing.display_name = display_name
             existing.auto_created = auto_created
         else:
-            session.add(PlaygroundFaceMapping(
-                owner_id=owner_id,
-                face_registered_id=face_registered_id,
-                dataset_id=dataset_id,
-                display_name=display_name,
-                auto_created=auto_created,
-            ))
+            session.add(
+                PlaygroundFaceMapping(
+                    owner_id=owner_id,
+                    face_registered_id=face_registered_id,
+                    dataset_id=dataset_id,
+                    display_name=display_name,
+                    auto_created=auto_created,
+                )
+            )
 
 
 async def ensure_dataset_for_face(
@@ -177,9 +183,7 @@ async def ensure_dataset_for_face(
         auto_created=True,
     )
 
-    _log.info(
-        f"Auto-created dataset '{ds_name}' ({ds_id}) for face #{face_registered_id}"
-    )
+    _log.info(f"Auto-created dataset '{ds_name}' ({ds_id}) for face #{face_registered_id}")
     return str(ds_id)
 
 
@@ -268,10 +272,12 @@ async def detect_and_link_new_faces(
         session.face_dataset_mapping.setdefault(rid, []).append(ds_id)
         session.face_name_mapping[rid] = display_name
 
-        new_links.append({
-            "face_registered_id": rid,
-            "dataset_id": ds_id,
-            "display_name": display_name,
-        })
+        new_links.append(
+            {
+                "face_registered_id": rid,
+                "dataset_id": ds_id,
+                "display_name": display_name,
+            }
+        )
 
     return new_links

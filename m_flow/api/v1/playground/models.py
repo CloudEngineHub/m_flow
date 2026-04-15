@@ -16,6 +16,7 @@ class SessionCreateRequest(BaseModel):
     @classmethod
     def validate_face_recognition_url(cls, v: str) -> str:
         from urllib.parse import urlparse
+
         parsed = urlparse(v)
         if parsed.hostname not in _ALLOWED_FACE_HOSTS:
             raise ValueError(f"face_recognition_url must be localhost, got {parsed.hostname}")
@@ -86,5 +87,3 @@ class SetLlmRequest(BaseModel):
     model: str = ""
     endpoint: str = ""
     api_key: str = ""
-
-
