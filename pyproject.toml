@@ -70,9 +70,6 @@ dependencies = [
     "python-dotenv>=1.0.0,<2.0.0",
     "typing_extensions>=4.12.0,<5.0.0",
     "python-magic-bin<0.5 ; platform_system == 'Windows'",
-
-    # -- Coreference resolution (bundled in-repo) --
-    "chinese-coref",
 ]
 
 [tool.uv.sources]
@@ -83,6 +80,9 @@ chinese-coref = { path = "./coreference", editable = true }
 # ---------------------------------------------------------------------------
 
 [project.optional-dependencies]
+
+# Playground (face recognition + coreference resolution)
+playground = ["chinese-coref"]
 
 # LLM providers
 anthropic = ["anthropic>=0.26"]
