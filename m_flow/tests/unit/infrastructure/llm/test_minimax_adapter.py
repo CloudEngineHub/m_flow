@@ -266,9 +266,7 @@ class TestExtractStructuredHappyPath:
         mock_aclient = AsyncMock(return_value=SimpleResponse(answer="ok"))
         adapter.aclient = mock_aclient
 
-        asyncio.get_event_loop().run_until_complete(
-            adapter.extract_structured("text", "prompt", SimpleResponse)
-        )
+        asyncio.get_event_loop().run_until_complete(adapter.extract_structured("text", "prompt", SimpleResponse))
 
         call_kwargs = mock_aclient.call_args
         assert call_kwargs.kwargs["model"] == "MiniMax-M2.7-highspeed"
@@ -279,9 +277,7 @@ class TestExtractStructuredHappyPath:
         mock_aclient = AsyncMock(return_value=DetailedResponse(summary="s", confidence=1.0, tags=[]))
         adapter.aclient = mock_aclient
 
-        asyncio.get_event_loop().run_until_complete(
-            adapter.extract_structured("text", "prompt", DetailedResponse)
-        )
+        asyncio.get_event_loop().run_until_complete(adapter.extract_structured("text", "prompt", DetailedResponse))
 
         call_kwargs = mock_aclient.call_args
         assert call_kwargs.kwargs["response_model"] is DetailedResponse
